@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stella · система вместо хаоса</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #08080A;
+      --bg2: #0D0D0F;
+      --surface: #111114;
+      --surface2: #17171B;
+      --surface3: #1E1E23;
+      --orange: #E8833A;
+      --orange2: #F09650;
+      --orange-glow: rgba(232, 131, 58, 0.2);
+      --green: #2E5A3B;
+      --green-light: #3D7A4F;
+      --green-glow: rgba(46, 90, 59, 0.2);
+      --white: #FFFFFF;
+      --cream: #F5F2ED;
+      --muted: #9B9892;
+      --dim: #5E5B55;
+      --border: rgba(255,255,255,0.06);
+      --border2: rgba(255,255,255,0.1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Outfit', sans-serif;
+      color: var(--cream);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE TEXTURE ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      padding: 24px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.4s ease;
+    }
+    nav.scrolled {
+      background: rgba(8,8,10,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 16px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--white);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .nav-logo span { color: var(--green-light); }
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-cta {
+      background: var(--orange);
+      color: #08080A;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 24px;
+      border-radius: 40px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+    .nav-cta:hover { background: var(--orange2); transform: translateY(-1px); }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      position: relative;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .hero-bg { position: absolute; inset: 0; z-index: 0; }
+
+    /* Animated gradient orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.3;
+      animation: float 8s ease-in-out infinite;
+    }
+    .orb-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, var(--orange) 0%, transparent 70%);
+      top: -200px; right: -100px;
+      animation-delay: 0s;
+    }
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, var(--green) 0%, transparent 70%);
+      bottom: -150px; left: -100px;
+      animation-delay: 3s;
+    }
+    .orb-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, var(--orange) 0%, transparent 70%);
+      top: 40%; left: 30%;
+      opacity: 0.12;
+      animation-delay: 1.5s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -20px) scale(1.05); }
+      66% { transform: translate(-20px, 20px) scale(0.95); }
+    }
+
+    /* Grid overlay */
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 48px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--orange);
+      font-weight: 600;
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.2s forwards;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: '';
+      width: 40px; height: 1px;
+      background: var(--orange);
+      opacity: 0.5;
+    }
+
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: clamp(3.8rem, 9vw, 7.5rem);
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.9s 0.35s forwards;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--green-light);
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 52px;
+      line-height: 1.75;
+      font-weight: 300;
+      opacity: 0;
+      animation: fadeUp 0.9s 0.5s forwards;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.9s 0.65s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--orange);
+      color: #08080A;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 16px 36px;
+      border-radius: 60px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .btn-primary:hover::before { opacity: 1; }
+    .btn-primary:hover {
+      background: var(--orange2);
+      transform: translateY(-3px);
+      box-shadow: 0 20px 50px var(--orange-glow);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--white);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      padding: 16px 36px;
+      border-radius: 60px;
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Scroll indicator */
+    .scroll-hint {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      animation: fadeUp 1s 1.2s forwards;
+    }
+    .scroll-hint span {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .scroll-line {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, var(--dim), transparent);
+      animation: scrollPulse 2s 2s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.4; transform: scaleY(1); }
+      50% { opacity: 1; transform: scaleY(1.2); }
+    }
+
+    /* ─── STATS STRIP ─── */
+    .stats-strip {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(17,17,20,0.6);
+      backdrop-filter: blur(10px);
+    }
+    .stats-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .stat-item {
+      padding: 36px 24px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.8rem;
+      font-weight: 400;
+      color: var(--green-light);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ─── SECTIONS ─── */
+    section { padding: 120px 0; }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.68rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--orange);
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .section-label::before {
+      content: '';
+      width: 24px; height: 1px;
+      background: var(--orange);
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--white);
+    }
+    .section-title em { font-style: italic; color: var(--green-light); }
+
+    /* ─── REVEAL ANIMATION ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(36px);
+      transition: opacity 0.85s ease, transform 0.85s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-l {
+      opacity: 0;
+      transform: translateX(-36px);
+      transition: opacity 0.85s ease, transform 0.85s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .reveal-l.visible { opacity: 1; transform: translateX(0); }
+    .reveal-r {
+      opacity: 0;
+      transform: translateX(36px);
+      transition: opacity 0.85s ease, transform 0.85s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .reveal-r.visible { opacity: 1; transform: translateX(0); }
+
+    /* ─── VALUES SECTION ─── */
+    .values-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 60px;
+    }
+    .value-card {
+      background: var(--surface);
+      padding: 48px 40px;
+      border: 1px solid var(--border);
+      transition: all 0.5s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .value-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--orange), var(--green-light));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+    .value-card:hover::before { transform: scaleX(1); }
+    .value-card:hover {
+      background: var(--surface2);
+      transform: translateY(-4px);
+    }
+    .value-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 4rem;
+      font-weight: 300;
+      color: var(--border2);
+      line-height: 1;
+      margin-bottom: 24px;
+      transition: color 0.4s;
+    }
+    .value-card:hover .value-number { color: rgba(61, 122, 79, 0.2); }
+    .value-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 400;
+      color: var(--green-light);
+      margin-bottom: 14px;
+    }
+    .value-desc {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.75;
+      font-weight: 300;
+    }
+
+    /* ─── PROBLEM SECTION ─── */
+    .problem-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .problem-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .problem-visual { position: relative; }
+    .problem-image-wrapper {
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 4/5;
+      background: var(--surface2);
+    }
+    .problem-image-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(20%) contrast(1.1);
+      opacity: 0.85;
+      transition: all 0.6s ease;
+    }
+    .problem-image-wrapper:hover img { opacity: 1; filter: grayscale(0%) contrast(1.05); }
+
+    .image-caption {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      right: 24px;
+      background: rgba(8,8,10,0.8);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .image-caption p { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.05em; }
+    .image-caption strong { color: var(--green-light); }
+
+    .problem-badge {
+      position: absolute;
+      top: -16px;
+      right: -16px;
+      width: 90px;
+      height: 90px;
+      background: var(--orange);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.75rem;
+      color: #08080A;
+      text-align: center;
+      font-weight: 600;
+      line-height: 1.3;
+      animation: rotateBadge 20s linear infinite;
+    }
+    @keyframes rotateBadge {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .loss-list { list-style: none; margin-top: 36px; }
+    .loss-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+    .loss-item:hover { padding-left: 8px; }
+    .loss-item:hover .loss-arrow { color: var(--orange); }
+    .loss-arrow {
+      font-size: 0.85rem;
+      color: var(--dim);
+      padding-top: 2px;
+      flex-shrink: 0;
+      transition: color 0.3s;
+    }
+    .loss-text { color: var(--cream); font-size: 0.98rem; line-height: 1.5; }
+    .loss-sub { color: var(--muted); font-size: 0.83rem; margin-top: 2px; }
+
+    /* ─── QUOTE SECTION ─── */
+    .quote-section {
+      padding: 80px 0;
+      text-align: center;
+      position: relative;
+    }
+    .quote-section::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .big-quote {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 300;
+      font-style: italic;
+      color: var(--white);
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      max-width: 780px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .big-quote::before {
+      content: '\201C';
+      position: absolute;
+      top: -40px;
+      left: -20px;
+      font-size: 8rem;
+      color: var(--green-light);
+      opacity: 0.12;
+      font-family: 'Cormorant Garamond', serif;
+      line-height: 1;
+    }
+    .quote-author {
+      margin-top: 28px;
+      font-size: 0.78rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ─── SYSTEM SECTION ─── */
+    .system-section {
+      position: relative;
+      overflow: hidden;
+    }
+    .system-section::before {
+      content: '';
+      position: absolute;
+      top: 0; right: -200px;
+      width: 800px; height: 100%;
+      background: radial-gradient(ellipse at right, var(--orange-glow) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .system-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+    .system-flow { margin-top: 48px; position: relative; }
+    .flow-step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .flow-connector { position: relative; flex-shrink: 0; }
+    .flow-dot {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      color: var(--green-light);
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s ease;
+    }
+    .flow-step:hover .flow-dot {
+      background: var(--orange);
+      color: #08080A;
+      border-color: var(--orange);
+    }
+    .flow-line {
+      position: absolute;
+      left: 21px;
+      top: 44px;
+      width: 1px;
+      height: 36px;
+      background: linear-gradient(to bottom, var(--border2), transparent);
+    }
+    .flow-content { padding-top: 10px; padding-bottom: 36px; }
+    .flow-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+    .flow-desc { color: var(--muted); font-size: 0.88rem; line-height: 1.65; }
+
+    .system-image-block { position: relative; margin-top: 0; }
+    .system-img-wrap {
+      border-radius: 4px;
+      overflow: hidden;
+      aspect-ratio: 3/4;
+      background: var(--surface2);
+      position: relative;
+    }
+    .system-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.75;
+      transition: opacity 0.5s;
+    }
+    .system-img-wrap:hover img { opacity: 0.9; }
+    .system-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(232,131,58,0.1) 0%, transparent 60%);
+    }
+
+    .highlight-box {
+      margin-top: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--orange);
+      padding: 24px 28px;
+      border-radius: 0 8px 8px 0;
+    }
+    .highlight-box p {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.2rem;
+      font-style: italic;
+      color: var(--white);
+      line-height: 1.55;
+    }
+
+    /* ─── DIFFERENCE SECTION ─── */
+    .diff-section { background: var(--surface); }
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      margin-top: 60px;
+      border: 1px solid var(--border);
+    }
+    .diff-card {
+      background: var(--surface);
+      padding: 48px 36px;
+      transition: background 0.3s;
+    }
+    .diff-card:hover { background: var(--surface2); }
+    .diff-from {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .diff-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      color: var(--green-light);
+      margin-bottom: 16px;
+    }
+    .diff-desc { color: var(--muted); font-size: 0.9rem; line-height: 1.7; }
+    .diff-icon {
+      width: 48px; height: 48px;
+      background: var(--surface3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      font-size: 1.3rem;
+    }
+
+    /* ─── TESTIMONIAL ─── */
+    .testimonial-section { position: relative; overflow: hidden; }
+    .testimonial-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 50%, var(--green-glow) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-top: 60px;
+    }
+    .testimonial-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 40px;
+      border-radius: 4px;
+      transition: all 0.4s ease;
+      position: relative;
+    }
+    .testimonial-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-4px);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+    }
+    .testimonial-card::before {
+      content: '\201C';
+      position: absolute;
+      top: 20px; right: 28px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 5rem;
+      color: var(--green-light);
+      opacity: 0.1;
+      line-height: 1;
+    }
+    .t-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      font-style: italic;
+      color: var(--cream);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    .t-author { display: flex; align-items: center; gap: 14px; }
+    .t-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      color: var(--green-light);
+    }
+    .t-name { font-size: 0.88rem; color: var(--cream); font-weight: 500; }
+    .t-role { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* ─── EVENT SECTION ─── */
+    #audit { position: relative; overflow: hidden; }
+    #audit::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 50% 60% at 80% 50%, var(--orange-glow) 0%, transparent 100%),
+        radial-gradient(ellipse 40% 50% at 20% 50%, var(--green-glow) 0%, transparent 100%);
+    }
+    .event-wrapper {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 60px;
+    }
+    .event-top-bar {
+      background: linear-gradient(90deg, var(--orange), var(--green));
+      padding: 12px 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .event-top-bar span {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--white);
+      font-weight: 700;
+    }
+    .event-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--white); opacity: 0.6; }
+    .event-body {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 60px;
+      padding: 56px 56px;
+      align-items: start;
+    }
+    .event-date {
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--orange);
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .event-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 300;
+      color: var(--white);
+      line-height: 1.1;
+      margin-bottom: 36px;
+    }
+    .event-features {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .event-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--cream);
+    }
+    .event-feature:nth-last-child(-n+2) { border-bottom: none; }
+    .ef-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(232,131,58,0.12);
+      border: 1px solid rgba(232,131,58,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.6rem;
+      color: var(--orange);
+    }
+    .event-sidebar {
+      min-width: 240px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 36px 28px;
+      text-align: center;
+      position: sticky;
+      top: 40px;
+    }
+    .event-price-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .event-price {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3.5rem;
+      font-weight: 300;
+      color: var(--green-light);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .event-currency { font-size: 1.2rem; vertical-align: super; }
+    .event-seats {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .seats-indicator { display: flex; gap: 4px; justify-content: center; margin-top: 10px; }
+    .seat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface3); }
+    .seat-dot.taken { background: var(--orange); }
+    .event-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #25D366;
+      color: #08080A;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 16px 24px;
+      border-radius: 60px;
+      text-decoration: none;
+      width: 100%;
+      transition: all 0.3s ease;
+      margin-bottom: 12px;
+    }
+    .event-btn:hover {
+      background: #20BD5A;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(37,211,102,0.3);
+    }
+    .event-guarantee { font-size: 0.72rem; color: var(--dim); line-height: 1.5; }
+
+    /* ─── ABOUT SECTION ─── */
+    .about-section { background: var(--surface); }
+    .about-layout { display: grid; grid-template-columns: 2fr 3fr; gap: 80px; align-items: center; }
+    .about-img-wrap {
+      position: relative;
+      aspect-ratio: 3/4;
+      background: var(--surface2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .about-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.8;
+      transition: opacity 0.5s;
+      filter: grayscale(15%);
+    }
+    .about-img-wrap:hover img { opacity: 0.95; filter: grayscale(0%); }
+    .about-accent {
+      position: absolute;
+      bottom: -1px; left: -1px; right: -1px;
+      height: 40%;
+      background: linear-gradient(to top, var(--surface) 0%, transparent 100%);
+    }
+    .about-name-plate {
+      position: absolute;
+      bottom: 24px; left: 24px; right: 24px;
+      padding: 16px 20px;
+      background: rgba(8,8,10,0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+    }
+    .about-name { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: var(--green-light); margin-bottom: 2px; }
+    .about-role { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .about-content-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+    .about-tag {
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--orange);
+      background: rgba(232,131,58,0.08);
+      border: 1px solid rgba(232,131,58,0.2);
+      padding: 6px 14px;
+      border-radius: 40px;
+    }
+    .about-text { color: var(--muted); font-size: 0.98rem; line-height: 1.8; margin-bottom: 20px; }
+
+    /* ─── FOOTER ─── */
+    footer { border-top: 1px solid var(--border); padding: 60px 0 40px; }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 40px;
+    }
+    .footer-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      color: var(--white);
+      letter-spacing: 0.15em;
+    }
+    .footer-logo span { color: var(--green-light); }
+    .footer-tagline { font-size: 0.72rem; color: var(--dim); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px; }
+    .footer-center { text-align: center; }
+    .footer-divider { width: 1px; height: 40px; background: var(--border2); margin: 0 auto 12px; }
+    .footer-links { display: flex; justify-content: flex-end; gap: 28px; }
+    .footer-links a {
+      font-size: 0.78rem;
+      color: var(--dim);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--dim);
+      max-width: 1100px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 48px;
+      padding-right: 48px;
+    }
+
+    .wa-icon { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 900px) {
+      nav { padding: 20px 24px; }
+      nav.scrolled { padding: 14px 24px; }
+      .nav-links { display: none; }
+      .container { padding: 0 24px; }
+      section { padding: 80px 0; }
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+      .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat-item:nth-child(odd) { border-right: 1px solid var(--border); }
+      .stat-item:nth-last-child(-n+2) { border-bottom: none; }
+      .values-grid { grid-template-columns: 1fr; }
+      .problem-layout { grid-template-columns: 1fr; }
+      .system-layout { grid-template-columns: 1fr; }
+      .diff-grid { grid-template-columns: 1fr; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .about-layout { grid-template-columns: 1fr; }
+      .event-body { grid-template-columns: 1fr; padding: 32px; }
+      .event-features { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr; text-align: center; }
+      .footer-links { justify-content: center; }
+      .hero-inner { padding: 0 24px; }
+      .hero h1 { font-size: clamp(3rem, 12vw, 5rem); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <div class="nav-logo">Stell<span>a</span></div>
+    <ul class="nav-links">
+      <li><a href="#values">Ценности</a></li>
+      <li><a href="#problem">Проблема</a></li>
+      <li><a href="#system">Система</a></li>
+      <li><a href="#audit">Событие</a></li>
+    </ul>
+    <a href="https://wa.me/972528494225?text=Здравствуйте%2C+хочу+записаться" target="_blank" class="nav-cta">Записаться</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">Stella · система вместо хаоса</div>
+      <h1>Сможешь ли ты<br>удержать то,<br>что <em>создаёшь</em>?</h1>
+      <p class="hero-sub">Деньги есть. Системы нет. Хаос крадёт прибыль каждый месяц — пока ты ищешь причину не там.</p>
+      <div class="hero-actions">
+        <a href="#audit" class="btn-primary">
+          Найти свои деньги
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#system" class="btn-ghost">Как это работает</a>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-strip reveal">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <div class="stat-number">7+</div>
+        <div class="stat-label">лет в бизнесе</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">200+</div>
+        <div class="stat-label">владельцев бизнеса</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">₪30K+</div>
+        <div class="stat-label">оборот клиентов</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">1</div>
+        <div class="stat-label">встреча меняет всё</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALUES -->
+  <section id="values">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-label">Ценности</div>
+        <h2 class="section-title">Целостность — когда слова,<br>решения и деньги <em>совпадают</em></h2>
+      </div>
+      <div class="values-grid">
+        <div class="value-card reveal" style="transition-delay: 0.1s">
+          <div class="value-number">01</div>
+          <div class="value-name">Структура</div>
+          <p class="value-desc">Не инструмент. Форма уважения к себе. Без неё капитал не удерживается — сколько бы ты ни зарабатывал.</p>
+        </div>
+        <div class="value-card reveal" style="transition-delay: 0.2s">
+          <div class="value-number">02</div>
+          <div class="value-name">Капитал</div>
+          <p class="value-desc">Не доход. Актив, который остаётся. Строится десятилетиями — но решение принимается сегодня, прямо сейчас.</p>
+        </div>
+        <div class="value-card reveal" style="transition-delay: 0.3s">
+          <div class="value-number">03</div>
+          <div class="value-name">Честность</div>
+          <p class="value-desc">Через цифры, не через эмоции. Только реальный баланс и честная чистая прибыль — без иллюзий.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE 1 -->
+  <div class="quote-section reveal">
+    <div class="container">
+      <p class="big-quote">Я не ковыряю ваши раны. Мы считаем ваши деньги.</p>
+      <p class="quote-author">— Stella · принцип работы</p>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section class="problem-section" id="problem">
+    <div class="container">
+      <div class="problem-layout">
+        <div class="reveal-l">
+          <div class="section-label">Точки потерь</div>
+          <h2 class="section-title">Что крадёт вашу<br>прибыль прямо <em>сейчас</em></h2>
+          <p style="color: var(--muted); margin: 20px 0 8px; font-size: 0.92rem; line-height: 1.7;">Вы узнаете себя в этом списке. Не потому что вы плохой предприниматель — а потому что никто не учил строить систему.</p>
+          <ul class="loss-list">
+            <li class="loss-item"><span class="loss-arrow">→</span><div><div class="loss-text">Не знаете реальную чистую прибыль</div><div class="loss-sub">Оборот есть, а на счету пусто</div></div></li>
+            <li class="loss-item"><span class="loss-arrow">→</span><div><div class="loss-text">Работаете много — накоплений нет</div><div class="loss-sub">Деньги уходят раньше, чем их замечаете</div></div></li>
+            <li class="loss-item"><span class="loss-arrow">→</span><div><div class="loss-text">Личные и бизнес-деньги перемешаны</div><div class="loss-sub">Без разделения нет контроля</div></div></li>
+            <li class="loss-item"><span class="loss-arrow">→</span><div><div class="loss-text">Знаете что делать — не делаете. Не из лени.</div><div class="loss-sub">Проблема в системе, а не в вас</div></div></li>
+            <li class="loss-item"><span class="loss-arrow">→</span><div><div class="loss-text">Доверие к своим решениям подорвано</div><div class="loss-sub">Каждый выбор — это тревога</div></div></li>
+          </ul>
+        </div>
+        <div class="reveal-r" style="transition-delay: 0.2s">
+          <div class="problem-visual">
+            <div class="problem-image-wrapper">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80&fit=crop" alt="Предприниматель думает о системе" loading="lazy" onerror="this.style.display='none'">
+              <div class="image-caption"><p><strong>Твой конкурент</strong> — твой собственный хаос. Не рынок.</p></div>
+            </div>
+            <div class="problem-badge">Найди деньги сейчас</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SYSTEM -->
+  <section class="system-section" id="system">
+    <div class="container">
+      <div class="system-layout">
+        <div>
+          <div class="reveal">
+            <div class="section-label">Система</div>
+            <h2 class="section-title">Образ жизни → мышление<br>→ решения → <em>деньги</em></h2>
+          </div>
+          <div class="system-flow">
+            <div class="flow-step reveal" style="transition-delay: 0.1s"><div class="flow-connector"><div class="flow-dot">1</div><div class="flow-line"></div></div><div class="flow-content"><div class="flow-title">Автономия</div><p class="flow-desc">Жить своим темпом. Тело и режим — первый актив, не последний. Это основа, на которой строится всё остальное.</p></div></div>
+            <div class="flow-step reveal" style="transition-delay: 0.2s"><div class="flow-connector"><div class="flow-dot">2</div><div class="flow-line"></div></div><div class="flow-content"><div class="flow-title">Финансовая модель</div><p class="flow-desc">Реальная картина бизнеса. Что приносит деньги, что их ест. Без модели — план на бумаге, не в жизни.</p></div></div>
+            <div class="flow-step reveal" style="transition-delay: 0.3s"><div class="flow-connector"><div class="flow-dot">3</div><div class="flow-line"></div></div><div class="flow-content"><div class="flow-title">Структура решений</div><p class="flow-desc">Когда брать сотрудника. Когда запускать рекламу. Когда поднимать цены. Решения с цифрами, а не из страха.</p></div></div>
+            <div class="flow-step reveal" style="transition-delay: 0.4s"><div class="flow-connector"><div class="flow-dot">4</div></div><div class="flow-content"><div class="flow-title">Капитал, который остаётся</div><p class="flow-desc">Деньги — следствие структуры, не усилий. Мотивация испаряется за 72 часа. Система — нет.</p></div></div>
+          </div>
+          <div class="highlight-box reveal" style="transition-delay: 0.5s"><p>«Нельзя масштабировать хаос. Твой конкурент — твой собственный хаос.»</p></div>
+        </div>
+        <div class="reveal-r" style="transition-delay: 0.2s">
+          <div class="system-image-block">
+            <div class="system-img-wrap">
+              <img src="https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=600&q=80&fit=crop" alt="Работа с финансовой системой" loading="lazy" onerror="this.style.display='none'">
+              <div class="system-overlay"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIFFERENCE -->
+  <section class="diff-section">
+    <div class="container">
+      <div class="reveal" style="text-align: center;">
+        <div class="section-label">Отличие</div>
+        <h2 class="section-title">Stella — это не про мотивацию.<br>Это про <em>систему.</em></h2>
+      </div>
+      <div class="diff-grid reveal" style="transition-delay: 0.15s">
+        <div class="diff-card"><div class="diff-icon">🧠</div><div class="diff-from">В отличие от</div><div class="diff-title">Психологии</div><p class="diff-desc">Ищу причину в балансе и структуре, а не в детстве. Внутренняя опора влияет на цифры — и я доказываю это цифрами, не ощущениями.</p></div>
+        <div class="diff-card"><div class="diff-icon">💬</div><div class="diff-from">В отличие от</div><div class="diff-title">Коучинга</div><p class="diff-desc">Даю ответы с цифрами, а не только вопросы. Взрослый предприниматель не нуждается в спасении — он нуждается в системе.</p></div>
+        <div class="diff-card"><div class="diff-icon">📊</div><div class="diff-from">В отличие от</div><div class="diff-title">Консалтинга</div><p class="diff-desc">Думаю как владелец изнутри, а не советник снаружи. Я была там — поэтому знаю, что работает, а что красиво звучит.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonial-section">
+    <div class="container">
+      <div class="reveal" style="text-align: center;"><div class="section-label">Результаты</div><h2 class="section-title">Что говорят<br>владельцы бизнеса</h2></div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card reveal" style="transition-delay: 0.1s"><p class="t-text">После встречи со Stella я впервые увидела реальную картину своего бизнеса. Оказалось, что 40% выручки просто испарялось без следа. Теперь у меня есть система.</p><div class="t-author"><div class="t-avatar">М</div><div><div class="t-name">Марина К.</div><div class="t-role">Владелец студии красоты · Тель-Авив</div></div></div></div>
+        <div class="testimonial-card reveal" style="transition-delay: 0.2s"><p class="t-text">Я думал, что проблема в продажах. Stella показала, что проблема в структуре расходов. За три месяца чистая прибыль выросла на 35% без роста оборота.</p><div class="t-author"><div class="t-avatar">А</div><div><div class="t-name">Алексей Р.</div><div class="t-role">Строительный бизнес · Ришон-ле-Цион</div></div></div></div>
+        <div class="testimonial-card reveal" style="transition-delay: 0.3s"><p class="t-text">Наконец-то я знаю, сколько я зарабатываю. Не оборот — а именно моя зарплата как владельца. Это изменило всё: решения, уверенность, спокойствие.</p><div class="t-author"><div class="t-avatar">Д</div><div><div class="t-name">Диана Ш.</div><div class="t-role">Онлайн-бизнес · Нетания</div></div></div></div>
+        <div class="testimonial-card reveal" style="transition-delay: 0.4s"><p class="t-text">Два года работала «в минус» — и не понимала почему. За одну встречу Stella нашла три точки утечки. Простые шаги — и через месяц бизнес стал прибыльным.</p><div class="t-author"><div class="t-avatar">Н</div><div><div class="t-name">Наталья В.</div><div class="t-role">Кейтеринг и ивент · Хайфа</div></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about-section">
+    <div class="container">
+      <div class="about-layout">
+        <div class="reveal-l">
+          <div class="about-img-wrap">
+            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&q=80&fit=crop&crop=face" alt="Stella — бизнес-ментор" loading="lazy" onerror="this.style.display='none'">
+            <div class="about-accent"></div>
+            <div class="about-name-plate"><div class="about-name">Stella</div><div class="about-role">Операционная система владельца</div></div>
+          </div>
+        </div>
+        <div class="reveal-r" style="transition-delay: 0.2s">
+          <div class="section-label">Кто за этим стоит</div>
+          <h2 class="section-title" style="margin-bottom: 28px;">Накопленный свет.<br>Не <em>вспышка.</em></h2>
+          <div class="about-content-tags"><span class="about-tag">Финансовая модель</span><span class="about-tag">Структура бизнеса</span><span class="about-tag">Операционная система</span></div>
+          <p class="about-text">Stella — не коуч с вдохновляющими цитатами. Это человек, который прошёл через хаос собственного бизнеса и вышел с системой.</p>
+          <p class="about-text">7 лет работы с владельцами бизнеса с оборотом от 30 000 ₪ в месяц. Сотни разборов, сотни найденных «дыр» в финансах. Каждый раз — конкретные цифры, а не общие советы.</p>
+          <p class="about-text">Внутренняя опора напрямую влияет на бизнес-решения — и я доказываю это через баланс и структуру, а не через психологию.</p>
+          <div class="highlight-box" style="margin-top: 28px;"><p>«Звезда светит не вспышкой. Накопленным светом. Именно так строится капитал.»</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVENT / AUDIT -->
+  <section id="audit">
+    <div class="container">
+      <div class="reveal" style="text-align: center; max-width: 600px; margin: 0 auto;">
+        <div class="section-label">Событие</div>
+        <h2 class="section-title">Найди деньги, которые<br>уже есть в твоём <em>бизнесе</em></h2>
+        <p style="color: var(--muted); margin-top: 16px; font-size: 0.95rem; line-height: 1.7;">Для бизнеса от 30 000 ₪/мес, который работает на износ, но в конце месяца пусто.</p>
+      </div>
+      <div class="event-wrapper reveal" style="transition-delay: 0.15s">
+        <div class="event-top-bar"><span>Ближайшее событие</span><div class="event-dot"></div><span>24 мая 2025</span><div class="event-dot"></div><span>Ришон-ле-Цион</span></div>
+        <div class="event-body">
+          <div>
+            <div class="event-date">24.05 · 17:00–21:00 · Ришон-ле-Цион</div>
+            <h3 class="event-title">Кофе-брейк<br>в формате системы</h3>
+            <ul class="event-features">
+              <li class="event-feature"><div class="ef-check">✓</div><span>Проверим бизнес на прибыльность</span></li>
+              <li class="event-feature"><div class="ef-check">✓</div><span>Разберём хаос и найдём деньги</span></li>
+              <li class="event-feature"><div class="ef-check">✓</div><span>Выделим зарплату владельца</span></li>
+              <li class="event-feature"><div class="ef-check">✓</div><span>Когда брать сотрудника, а когда нет</span></li>
+              <li class="event-feature"><div class="ef-check">✓</div><span>Таргет: когда запускать без убытков</span></li>
+              <li class="event-feature"><div class="ef-check">✓</div><span>Финансовая модель — шаблон с собой</span></li>
+            </ul>
+          </div>
+          <div class="event-sidebar">
+            <div class="event-price-label">Стоимость участия</div>
+            <div class="event-price"><span class="event-currency">₪</span>149</div>
+            <div class="event-seats"><div>осталось несколько мест</div><div class="seats-indicator"><div class="seat-dot taken"></div><div class="seat-dot taken"></div><div class="seat-dot taken"></div><div class="seat-dot taken"></div><div class="seat-dot taken"></div><div class="seat-dot taken"></div><div class="seat-dot taken"></div><div class="seat-dot"></div><div class="seat-dot"></div><div class="seat-dot"></div></div></div>
+            <a href="https://wa.me/972528494225?text=Здравствуйте%2C+хочу+записаться+на+кофе-брейк+24.05" target="_blank" rel="noopener noreferrer" class="event-btn">
+              <svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+              Записаться в WhatsApp
+            </a>
+            <div class="event-guarantee">План без финансовой модели — красиво оформленный самообман</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE 2 -->
+  <div class="quote-section reveal" style="padding: 60px 0 100px;">
+    <div class="container">
+      <p class="big-quote">Взрослый предприниматель не нуждается в спасении. Он нуждается в <em style="font-style: italic; color: var(--green-light);">системе.</em></p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div><div class="footer-logo">Stell<span>a</span></div><div class="footer-tagline">Накопленный свет · система вместо хаоса</div></div>
+      <div class="footer-center"><div class="footer-divider"></div><div style="font-size: 0.72rem; color: var(--dim); letter-spacing: 0.1em;">Ришон-ле-Цион, Израиль</div></div>
+      <div class="footer-links"><a href="https://wa.me/972528494225" target="_blank">WhatsApp</a><a href="#audit">Событие</a><a href="#system">Система</a></div>
+    </div>
+    <p class="footer-copy">© 2026 Stella · Честность через цифры · Автономия · Капитал</p>
+  </footer>
+
+  <script>
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => { nav.classList.toggle('scrolled', window.scrollY > 60); });
+    const reveals = document.querySelectorAll('.reveal, .reveal-l, .reveal-r');
+    const io = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(el => io.observe(el));
+    document.querySelectorAll('a[href^="#"]').forEach(a => { a.addEventListener('click', e => { const t = document.querySelector(a.getAttribute('href')); if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }); });
+    document.addEventListener('mousemove', e => { const x = (e.clientX / window.innerWidth - 0.5) * 30; const y = (e.clientY / window.innerHeight - 0.5) * 30; document.querySelector('.orb-1').style.transform = `translate(${x * 0.5}px, ${y * 0.5}px)`; document.querySelector('.orb-2').style.transform = `translate(${-x * 0.3}px, ${-y * 0.3}px)`; });
+  </script>
+</body>
+</html>
